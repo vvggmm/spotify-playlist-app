@@ -1,20 +1,92 @@
 const CLIENT_ID = "23d1200b4f6e4d7fa2a0fcc8ae3de7c8";
 const REDIRECT_URI = "https://vvggmm.github.io/spotify-playlist-app/";
 const SCOPES = "playlist-modify-private playlist-modify-public";
+const SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize";
 
-function login() {
-  const url =
-    `https://accounts.spotify.com/authorize?response_type=token&client_id=${CLIENT_ID}` +
-    `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-    `&scope=${encodeURIComponent(SCOPES)}`;
-  window.location = url;
+async function handleRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+
+  if (!code) return;
+
+  const verifier = localStorage.getItem("verifier");
+
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: verifier
+  });
+
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body
+  });
+
+  const data = await res.json();
+  localStorage.setItem("access_token", data.access_token);
+
+  history.replaceState(null, "", "/"); // 🔥 esto limpia la URL
+
+  console.log("✅ Token obtenido");
+}
+
+handleRedirect();
+
+function getToken() {
+  return localStorage.getItem("access_token");
+}
+
+async function generateCodeVerifier() {
+  const array = new Uint32Array(56/2);
+  window.crypto.getRandomValues(array);
+  return Array.from(array, dec => ('0' + dec.toString(16)).substr(-2)).join('');
+}
+
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return window.crypto.subtle.digest('SHA-256', data);
+}
+
+function base64encode(input) {
+  return btoa(String.fromCharCode(...new Uint8Array(input)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+async function generateCodeChallenge(verifier) {
+  const hashed = await sha256(verifier);
+  return base64encode(hashed);
+}
+
+
+async function login() {
+  const verifier = await generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+
+  localStorage.setItem("verifier", verifier);
+
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: "code",
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: "S256",
+    code_challenge: challenge,
+    scope: "playlist-modify-private playlist-modify-public user-read-private"
+  });
+
+  window.location = `${SPOTIFY_AUTH_URL}?${params.toString()}`;
 }
 
 document.getElementById("loginBtn").onclick = login;
 
 const hash = window.location.hash.substring(1);
 const params = new URLSearchParams(hash);
-const token = params.get("access_token");
+const token = getToken();
 
 // si hay token, mostrar UI
 if (token) {
@@ -82,3 +154,4 @@ async function createPlaylist() {
 }
 
 document.getElementById("createBtn").onclick = createPlaylist;
+
