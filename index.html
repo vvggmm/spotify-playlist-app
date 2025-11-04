@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>🎵 Rockkk Playlist Creator</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<h2>🎧 Rock Playlist Creator</h2>
+
+<button id="loginBtn">Login con Spotify</button>
+
+<div id="app" style="display:none">
+
+  <label>📛 Nombre de Playlist</label>
+  <input id="playlistName" placeholder="Rock Revival 🔥">
+
+  <label>🎶 Lista de canciones (una por línea)</label>
+  <textarea id="songInput" rows="10"></textarea>
+
+  <button id="createBtn">Crear Playlist + Agregar Canciones</button>
+
+  <h3>📋 Log</h3>
+  <div id="log"></div>
+</div>
+
+<script src="songs.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
+
